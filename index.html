@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glotch One - Map Explorer</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+
+    <style>
+        body { margin: 0; padding: 0; font-family: sans-serif; }
+        #map { height: 100vh; width: 100%; }
+        .info-panel {
+            position: absolute;
+            top: 10px;
+            left: 50px;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        h1 { margin: 0; font-size: 18px; color: #333; }
+    </style>
+</head>
+<body>
+
+    <div class="info-panel">
+        <h1>Glotch One</h1>
+        <div id="controls">
+            <small>Usa las herramientas de la derecha para medir o comparar.</small>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+    <script>
+        // 1. Inicializar el mapa
+        const map = L.map('map').setView([20.6597, -103.3496], 13); // Coordenadas iniciales
+
+        // 2. Definir las Vistas (Capas Base)
+        const estandar = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        });
+
+        const satelital = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EBP, and the GIS User Community'
+        });
+
+        const temperatura = L.tileLayer('https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=TU_API_KEY_AQUI', {
+            attribution: '© OpenWeatherMap',
+            opacity: 0.5
+        });
+
+        // Añadir capa por defecto
+        estandar.addTo(map);
+
+        // 3. Control de Capas (Tres tipos de vistas)
+        const baseMaps = {
+            "Estándar": estandar,
+            "Satelital": satelital
+        };
+
+        const overlayMaps = {
+            "Capa de Temperatura": temperatura
+        };
+
+        L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+        // 4. Herramientas de Medición y Comparación
+        const drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+
+        const drawControl = new L.Control.Draw({
+            draw: {
+                polygon: {
+                    allowIntersection: false,
+                    showArea: true,
+                    shapeOptions: { color: '#2196f3' }
+                },
+                polyline: {
+                    shapeOptions: { color: '#f44336' }
+                },
+                circle: false,
+                marker: false,
+                circlemarker: false,
+                rectangle: true
+            },
+            edit: {
+                featureGroup: drawnItems,
+                remove: true
+            }
+        });
+        map.addControl(drawControl);
+
+        // Evento al crear una figura (Medir distancia o área)
+        map.on(L.Draw.Event.CREATED, function (event) {
+            const layer = event.layer;
+            const type = event.layerType;
+
+            if (type === 'polyline') {
+                const distance = calculateDistance(layer.getLatLngs());
+                layer.bindPopup("Distancia: " + distance.toFixed(2) + " metros").openPopup();
+            }
+            
+            if (type === 'polygon' || type === 'rectangle') {
+                const area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
+                layer.bindPopup("Área: " + (area / 10000).toFixed(2) + " hectáreas").openPopup();
+                
+                // Habilitar arrastre para "Comparar en otro lugar"
+                layer.editing.enable(); 
+            }
+
+            drawnItems.addLayer(layer);
+        });
+
+        function calculateDistance(latlngs) {
+            let total = 0;
+            for (let i = 0; i < latlngs.length - 1; i++) {
+                total += latlngs[i].distanceTo(latlngs[i+1]);
+            }
+            return total;
+        }
+    </script>
+</body>
+</html>
