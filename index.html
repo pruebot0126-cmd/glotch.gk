@@ -3,102 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Glotch One - Comparador de Terrenos</title>
+    <title>Glotch One - Herramienta de Comparación</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
 
     <style>
-        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        #map { height: 100vh; width: 100%; cursor: crosshair; }
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+        #map { height: 100vh; width: 100%; }
         .info-panel {
-            position: absolute; top: 10px; left: 55px; z-index: 1000;
-            background: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 220px;
+            position: absolute; top: 15px; left: 60px; z-index: 1000;
+            background: white; padding: 15px; border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 250px;
         }
-        h1 { margin: 0 0 10px 0; font-size: 20px; color: #1a73e8; text-align: center; }
-        .hint { font-size: 11px; color: #444; line-height: 1.4; border-top: 1px solid #eee; pt: 8px; }
-        /* Estilo para que el polígono parezca movible */
-        .leaflet-interactive { cursor: move !important; }
+        h1 { margin: 0; font-size: 22px; color: #2c3e50; border-bottom: 2px solid #3498db; pb: 5px; }
+        .steps { font-size: 13px; color: #555; margin-top: 10px; }
+        .badge { background: #3498db; color: white; padding: 2px 5px; border-radius: 4px; font-size: 10px; }
     </style>
 </head>
 <body>
 
     <div class="info-panel">
-        <h1>Glotch One</h1>
-        <div class="hint">
-            <b>1.</b> Selecciona el polígono a la derecha.<br>
-            <b>2.</b> Dibújalo y ciérralo (clic al inicio).<br>
-            <b>3.</b> <b>Haz clic sostenido</b> sobre el color azul para moverlo.
+        <h1>Glotch One <span class="badge">PRO</span></h1>
+        <div class="steps">
+            <b>1.</b> Dibuja un área con el icono de pentágono.<br>
+            <b>2.</b> <b>Haz clic en el icono de la "mano"</b> (Drag Mode) en el menú de la izquierda.<br>
+            <b>3.</b> ¡Ahora puedes mover cualquier figura!
         </div>
     </div>
 
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/leaflet-path-drag@1.1.0/dist/Leaflet.Path.Drag.min.js"></script>
+    <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
 
     <script>
+        // 1. Configuración del Mapa
         const map = L.map('map').setView([20.6597, -103.3496], 13);
 
-        // VISTAS
+        // 2. Capas de Vista
         const estandar = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        const satelital = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
-        const temperatura = L.tileLayer('https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=684f88062973167b5796245d8b8577e5', {
-            opacity: 0.5
+        
+        const satelital = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Esri'
         });
 
-        const baseMaps = { "Estándar": estandar, "Satelital": satelital };
-        const overlayMaps = { "Ver Temperatura": temperatura };
+        // Capa de Temperatura (OpenWeatherMap) con API Key actualizada
+        const tempLayer = L.tileLayer('https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=684f88062973167b5796245d8b8577e5', {
+            opacity: 0.5,
+            zIndex: 100
+        });
+
+        const baseMaps = { "Mapa Estándar": estandar, "Vista Satelital": satelital };
+        const overlayMaps = { "Capa de Temperatura": tempLayer };
         L.control.layers(baseMaps, overlayMaps).addTo(map);
 
-        // HERRAMIENTAS
-        const drawnItems = new L.FeatureGroup();
-        map.addLayer(drawnItems);
-
-        const drawControl = new L.Control.Draw({
-            draw: {
-                polygon: {
-                    allowIntersection: false,
-                    shapeOptions: { color: '#1a73e8', fillOpacity: 0.4, weight: 2, draggable: true }
-                },
-                rectangle: {
-                    shapeOptions: { color: '#1a73e8', fillOpacity: 0.4, weight: 2, draggable: true }
-                },
-                polyline: true, circle: false, marker: false, circlemarker: false
-            },
-            edit: { featureGroup: drawnItems }
+        // 3. Configurar Geoman (Herramientas de Dibujo y Arrastre)
+        map.pm.addControls({
+            position: 'topleft',
+            drawCircle: false,
+            drawMarker: false,
+            drawCircleMarker: false,
+            drawPolyline: true, // Para medir distancias
+            drawRectangle: true,
+            drawPolygon: true,
+            dragMode: true, // BOTÓN CLAVE PARA ARRASTRAR
+            editMode: true,
+            removalMode: true
         });
-        map.addControl(drawControl);
 
-        // EVENTO AL CREAR
-        map.on(L.Draw.Event.CREATED, function (e) {
+        // Configurar idioma a español
+        map.pm.setLang('es');
+
+        // 4. Lógica de medición al crear figuras
+        map.on('pm:create', (e) => {
             const layer = e.layer;
             
-            if (e.layerType === 'polygon' || e.layerType === 'rectangle') {
-                // ACTIVAR ARRASTRE EXPLÍCITO
-                layer.options.draggable = true;
-                if (layer.dragging) {
-                    layer.dragging.enable();
-                }
-
-                // Cálculo de área
-                const latlngs = layer.getLatLngs()[0];
-                const area = L.GeometryUtil.geodesicArea(latlngs);
-                layer.bindPopup(`<b>Área:</b> ${(area / 10000).toFixed(2)} Ha<br>↑ Mantén presionado para mover`).openPopup();
+            // Si es un polígono o rectángulo, calcular área
+            if (e.shape === 'Polygon' || e.shape === 'Rectangle') {
+                const area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
+                layer.bindPopup(`<b>Área:</b> ${(area / 10000).toFixed(2)} Hectáreas<br><i>Usa la "mano" para moverme</i>`).openPopup();
             }
 
-            if (e.layerType === 'polyline') {
+            // Si es una línea, calcular distancia
+            if (e.shape === 'Line') {
                 const latlngs = layer.getLatLngs();
-                let dist = 0;
+                let distance = 0;
                 for (let i = 0; i < latlngs.length - 1; i++) {
-                    dist += latlngs[i].distanceTo(latlngs[i+1]);
+                    distance += latlngs[i].distanceTo(latlngs[i+1]);
                 }
-                layer.bindPopup(`<b>Distancia:</b> ${dist.toFixed(2)} m`).openPopup();
+                layer.bindPopup(`<b>Distancia:</b> ${distance.toFixed(2)} metros`).openPopup();
             }
-
-            drawnItems.addLayer(layer);
         });
     </script>
 </body>
