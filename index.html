@@ -3,27 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Glotch Two - Comparador Pro</title>
+    <title>Glotch One - Comparador Estático</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
 
     <style>
-        body { margin: 0; padding: 0; }
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
         #map { height: 100vh; width: 100%; }
         .info-panel {
-            position: absolute; top: 10px; left: 50px; z-index: 1000;
-            background: white; padding: 10px; border-radius: 8px;
-            font-family: Arial, sans-serif; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            position: absolute; top: 10px; left: 55px; z-index: 1000;
+            background: white; padding: 15px; border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); max-width: 250px;
         }
-        .badge { background: #2ecc71; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+        h1 { margin: 0; font-size: 20px; color: #1a73e8; }
+        .instruction { font-size: 12px; color: #444; margin-top: 8px; line-height: 1.4; }
+        .btn-clear { 
+            margin-top: 10px; width: 100%; padding: 5px; 
+            background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
     <div class="info-panel">
-        <h2 style="margin:0; font-size: 18px;">Glotch One <span class="badge">V2.0</span></h2>
-        <p style="margin: 5px 0 0; font-size: 13px; color: #666;">
+        <h1>Glotch One</h1>
+        <div class="instruction">
+            <b>1.</b> Dibuja un polígono o rectángulo.<br>
+            <b>2.</b> Al terminar, <b>la figura se quedará fija</b> en el centro.<br>
+            <b>3.</b> Desplaza el mapa para comparar el tamaño con otros lugares.
+        </div>
+        <button class="btn-clear" onclick="clearMap()">Borrar y empezar de nuevo</button>
+    </div>
 
     <div id="map"></div>
 
