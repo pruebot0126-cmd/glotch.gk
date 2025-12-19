@@ -1,156 +1,123 @@
-<!DOCTYPE html>
+mejora y optimiza el siguiente codigo para dispositivos moviles <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Glotch One - Buscador y Comparador</title>
-    
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glotch One - Comparador Estático</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
 
-    <style>
-        :root {
-            --primary-color: #1a73e8;
-            --danger-color: #e74c3c;
-        }
-
-        body { 
-            margin: 0; padding: 0; 
-            font-family: -apple-system, system-ui, sans-serif;
-            overscroll-behavior-y: contain;
-        }
-
-        #map { height: 100dvh; width: 100%; z-index: 1; }
-
-        /* Estilo para el botón de borrar flotante */
-        .custom-control-btn {
-            background: white;
-            border: 2px solid rgba(0,0,0,0.2);
-            border-radius: 4px;
-            padding: 8px 12px;
-            cursor: pointer;
-            font-weight: bold;
-            color: var(--danger-color);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            font-size: 14px;
-        }
-
-        .custom-control-btn:active { background: #f4f4f4; }
-
-        /* Ajustes del buscador para móviles */
-        .leaflet-control-geocoder {
-            margin-top: 12px !important;
-            border-radius: 8px !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
-        }
-        
-        .leaflet-control-geocoder-form input {
-            font-size: 16px !important; /* Evita zoom automático en iOS */
-        }
-    </style>
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        #map { height: 100vh; width: 100%; }
+        .info-panel {
+            position: absolute; top: 10px; left: 55px; z-index: 1000;
+            background: white; padding: 15px; border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); max-width: 250px;
+        }
+        h1 { margin: 0; font-size: 20px; color: #1a73e8; }
+        .instruction { font-size: 12px; color: #444; margin-top: 8px; line-height: 1.4; }
+        .btn-clear { 
+            margin-top: 10px; width: 100%; padding: 5px; 
+            background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;
+        }
+    </style>
 </head>
 <body>
 
-    <div id="map"></div>
+    <div class="info-panel">
+        <h1>Glotch One</h1>
+        <div class="instruction">
+            <b>1.</b> Dibuja un polígono o rectángulo.<br>
+            <b>2.</b> Al terminar, <b>la figura se quedará fija</b> en el centro.<br>
+            <b>3.</b> Desplaza el mapa para comparar el tamaño con otros lugares.
+        </div>
+        <button class="btn-clear" onclick="clearMap()">Borrar y empezar de nuevo</button>
+    </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    <div id="map"></div>
 
-    <script>
-        const map = L.map('map', {
-            zoomControl: false,
-            tap: true
-        }).setView([20.6597, -103.3496], 13);
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
-        let fixedLayer = null;
-        let offsets = [];
+    <script>
+        const map = L.map('map').setView([20.6597, -103.3496], 13);
+        let fixedLayer = null; // Aquí guardaremos la figura fija
+        let offsets = []; // Distancias relativas de los puntos al centro
 
-        // Capas base
-        const estandar = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        const satelital = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+        // --- CAPAS ---
+        const estandar = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        const satelital = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+        const temperatura = L.tileLayer('https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=684f88062973167b5796245d8b8577e5', {
+            opacity: 0.5
+        });
 
-        // --- AGREGAR BUSCADOR ---
-        const geocoder = L.Control.geocoder({
-            defaultMarkGeocode: true,
-            placeholder: "Buscar ciudad o lugar...",
-            errorMessage: "No se encontró el lugar."
-        }).addTo(map);
+        const baseMaps = { "Estándar": estandar, "Satelital": satelital };
+        const overlayMaps = { "Ver Temperatura": temperatura };
+        L.control.layers(baseMaps, overlayMaps).addTo(map);
 
-        // --- CONTROLES UI ---
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
-        
-        // Botón "Borrar" personalizado
-        const ClearControl = L.Control.extend({
-            options: { position: 'topright' },
-            onAdd: function() {
-                const btn = L.DomUtil.create('button', 'custom-control-btn');
-                btn.innerHTML = 'Limpiar Figura';
-                btn.onclick = clearMap;
-                return btn;
-            }
-        });
-        map.addControl(new ClearControl());
+        // --- HERRAMIENTAS DE DIBUJO ---
+        const drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
 
-        // Capas
-        L.control.layers({ "Mapa": estandar, "Satelital": satelital }, {}, { position: 'bottomleft' }).addTo(map);
+        const drawControl = new L.Control.Draw({
+            draw: {
+                polygon: { allowIntersection: false, shapeOptions: { color: '#1a73e8', fillOpacity: 0.3 } },
+                rectangle: { shapeOptions: { color: '#e67e22', fillOpacity: 0.3 } },
+                polyline: true, circle: false, marker: false, circlemarker: false
+            }
+        });
+        map.addControl(drawControl);
 
-        // --- DIBUJO ---
-        const drawnItems = new L.FeatureGroup();
-        map.addLayer(drawnItems);
+        // --- LÓGICA DE COMPARACIÓN (FIGURA FIJA) ---
+        map.on(L.Draw.Event.CREATED, function (e) {
+            const layer = e.layer;
+            const type = e.layerType;
 
-        const drawControl = new L.Control.Draw({
-            position: 'topleft',
-            draw: {
-                polygon: { allowIntersection: false, shapeOptions: { color: '#1a73e8', weight: 4 } },
-                rectangle: { shapeOptions: { color: '#e67e22', weight: 4 } },
-                polyline: false, circle: false, marker: false, circlemarker: false
-            }
-        });
-        map.addControl(drawControl);
+            if (type === 'polygon' || type === 'rectangle') {
+                fixedLayer = layer;
+                const center = map.getCenter();
+                const latlngs = layer.getLatLngs()[0];
 
-        // --- LÓGICA DE COMPARACIÓN (FIGURA FIJA) ---
-        map.on(L.Draw.Event.CREATED, function (e) {
-            clearMap();
-            const layer = e.layer;
-            fixedLayer = layer;
-            const center = map.getCenter();
-            
-            // Soporte para polígonos y rectángulos (manejo de arreglos anidados)
-            const rawLatLngs = layer.getLatLngs();
-            const latlngs = Array.isArray(rawLatLngs[0]) ? rawLatLngs[0] : rawLatLngs;
+                // Guardar la distancia de cada punto respecto al centro del mapa
+                offsets = latlngs.map(p => ({
+                    latDiff: p.lat - center.lat,
+                    lngDiff: p.lng - center.lng
+                }));
 
-            offsets = latlngs.map(p => ({
-                latDiff: p.lat - center.lat,
-                lngDiff: p.lng - center.lng
-            }));
+                layer.bindPopup("<b>Modo Comparación:</b> Navega por el mapa para comparar este tamaño.").openPopup();
+                drawnItems.addLayer(layer);
+            } else {
+                // Para líneas (medir distancia), no las fijamos
+                const points = layer.getLatLngs();
+                let d = 0;
+                for(let i=0; i<points.length-1; i++) d += points[i].distanceTo(points[i+1]);
+                layer.bindPopup(`Distancia: ${d.toFixed(2)} m`);
+                drawnItems.addLayer(layer);
+            }
+        });
 
-            drawnItems.addLayer(layer);
-        });
+        // Evento que ocurre cada vez que mueves el mapa
+        map.on('move', function() {
+            if (fixedLayer && offsets.length > 0) {
+                const newCenter = map.getCenter();
+                
+                // Calculamos las nuevas coordenadas sumando el desfase al nuevo centro
+                const newLatLngs = offsets.map(offset => ({
+                    lat: newCenter.lat + offset.latDiff,
+                    lng: newCenter.lng + offset.lngDiff
+                }));
 
-        // Movimiento suave optimizado
-        let ticking = false;
-        map.on('move', function() {
-            if (!ticking && fixedLayer && offsets.length > 0) {
-                window.requestAnimationFrame(() => {
-                    const newCenter = map.getCenter();
-                    const newLatLngs = offsets.map(offset => ({
-                        lat: newCenter.lat + offset.latDiff,
-                        lng: newCenter.lng + offset.lngDiff
-                    }));
-                    fixedLayer.setLatLngs(newLatLngs);
-                    ticking = false;
-                });
-                ticking = true;
-            }
-        });
+                fixedLayer.setLatLngs(newLatLngs);
+            }
+        });
 
-        function clearMap() {
-            drawnItems.clearLayers();
-            fixedLayer = null;
-            offsets = [];
-        }
-    </script>
+        function clearMap() {
+            drawnItems.clearLayers();
+            fixedLayer = null;
+            offsets = [];
+        }
+    </script>
 </body>
 </html>
