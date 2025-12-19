@@ -3,97 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Glotch One - Comparador Pro</title>
+    <title>Glotch One - Map Tools</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
 
     <style>
-        body { margin: 0; padding: 0; }
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         #map { height: 100vh; width: 100%; }
         .info-panel {
-            position: absolute; top: 15px; left: 60px; z-index: 1000;
-            background: white; padding: 12px; border-radius: 8px;
-            font-family: Arial, sans-serif; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            position: absolute; top: 10px; left: 55px; z-index: 1000;
+            background: white; padding: 15px; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-left: 5px solid #3498db;
         }
-        .badge { background: #2ecc71; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+        .help-text { font-size: 12px; color: #666; margin-top: 5px; line-height: 1.4; }
     </style>
 </head>
 <body>
 
     <div class="info-panel">
-        <h2 style="margin:0; font-size: 18px;">Glotch One <span class="badge">V2.0</span></h2>
-        <p style="margin: 5px 0 0; font-size: 13px; color: #666;">
-            Dibuja un polígono y <b>arrástralo</b> para comparar.
-        </p>
+        <h2 style="margin:0; font-size: 20px; color: #2c3e50;">Glotch One</h2>
+        <div class="help-text">
+            • <b>Cerrar polígono:</b> Clic en el primer punto o botón "Finish".<br>
+            • <b>Comparar:</b> Una vez creado, haz clic y arrastra el área.<br>
+            • <b>Medir:</b> Usa la herramienta de línea para distancias.
+        </div>
     </div>
 
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/leaflet-path-drag@1.1.0/dist/Leaflet.Path.Drag.js"></script>
+    <script src="https://unpkg.com/leaflet-path-drag@1.1.0/dist/Leaflet.Path.Drag.js"></script>
 
     <script>
-        // 1. Configuración del mapa
+        // 1. Inicialización
         const map = L.map('map').setView([20.6597, -103.3496], 13);
 
-        const estandar = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        const satelital = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+        // 2. Capas de Vista
+        const estandar = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
         
-        // Capa de Temperatura (OpenWeatherMap)
-        const tempLayer = L.tileLayer('https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=684f88062973167b5796245d8b8577e5', {
-            opacity: 0.5
+        const satelital = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Esri'
         });
 
-        const baseMaps = { "Mapa Estándar": estandar, "Satelital": satelital };
-        const overlayMaps = { "Ver Temperatura": tempLayer };
+        const temperatura = L.tileLayer('https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=684f88062973167b5796245d8b8577e5', {
+            opacity: 0.5,
+            attribution: 'OpenWeatherMap'
+        });
+
+        const baseMaps = { "Estándar": estandar, "Satelital": satelital };
+        const overlayMaps = { "Clima: Temperatura": temperatura };
         L.control.layers(baseMaps, overlayMaps).addTo(map);
 
-        // 2. Grupo donde se guardan los dibujos
+        // 3. Herramientas de Dibujo
         const drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
 
-        // 3. Configuración de herramientas de dibujo
         const drawControl = new L.Control.Draw({
             draw: {
                 polygon: {
                     allowIntersection: false,
-                    shapeOptions: { color: '#3498db', fillOpacity: 0.5, draggable: true }
+                    showArea: true,
+                    drawError: { color: '#e1e100', message: '<strong>Error:<strong> ¡No puedes cruzar líneas!' },
+                    shapeOptions: { color: '#3498db', draggable: true }
                 },
-                rectangle: {
-                    shapeOptions: { color: '#e67e22', fillOpacity: 0.5, draggable: true }
-                },
-                polyline: true,
+                rectangle: { shapeOptions: { color: '#e67e22', draggable: true } },
+                polyline: { shapeOptions: { color: '#e74c3c' } },
                 circle: false, marker: false, circlemarker: false
             },
-            edit: {
-                featureGroup: drawnItems
-            }
+            edit: { featureGroup: drawnItems }
         });
         map.addControl(drawControl);
 
-        // 4. Lógica de Arrastre (Drag)
+        // 4. Lógica al finalizar un dibujo
         map.on(L.Draw.Event.CREATED, function (e) {
             const layer = e.layer;
             const type = e.layerType;
 
-            // Habilitar arrastre si es polígono o rectángulo
             if (type === 'polygon' || type === 'rectangle') {
-                layer.makeDraggable(); // ESTA ES LA FUNCIÓN CLAVE
-                
-                // Calcular área inicial
+                // Habilitar el arrastre inmediatamente
+                if (layer.makeDraggable) {
+                    layer.makeDraggable();
+                }
+
+                // Calcular Área
                 const area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
-                layer.bindPopup(`Área: ${(area / 10000).toFixed(2)} Ha. <br><b>¡Arrástrame!</b>`).openPopup();
+                const areaText = (area / 10000).toFixed(2) + " Hectáreas";
+                layer.bindPopup("<b>Área:</b> " + areaText + "<br>👉 Arrástrame para comparar").openPopup();
             }
 
             if (type === 'polyline') {
+                const latlngs = layer.getLatLngs();
                 let distance = 0;
-                const points = layer.getLatLngs();
-                for (let i = 0; i < points.length - 1; i++) {
-                    distance += points[i].distanceTo(points[i+1]);
+                for (let i = 0; i < latlngs.length - 1; i++) {
+                    distance += latlngs[i].distanceTo(latlngs[i+1]);
                 }
-                layer.bindPopup(`Distancia: ${(distance).toFixed(2)} metros`).openPopup();
+                layer.bindPopup("<b>Distancia:</b> " + (distance).toFixed(2) + " m").openPopup();
             }
 
             drawnItems.addLayer(layer);
