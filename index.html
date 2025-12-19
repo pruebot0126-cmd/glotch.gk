@@ -120,4 +120,69 @@
         }
     </script>
 </body>
+    <!DOCTYPE html>
+<html>
+<head>
+    <title>Mapa de Entidades - Límites Territoriales</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map { height: 600px; width: 100%; }
+        .info { padding: 6px 8px; font: 14px/16px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.8); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // 1. Inicializar el mapa centrado en México
+    const map = L.map('map').setView([23.6345, -102.5528], 5);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // 2. Estilo para los límites territoriales
+    function style(feature) {
+        return {
+            fillColor: '#3498db',
+            weight: 2,         // Grosor de la línea del límite
+            opacity: 1,
+            color: 'white',    // Color del borde
+            dashArray: '3',    // Línea punteada
+            fillOpacity: 0.2
+        };
+    }
+
+    // 3. Función para resaltar al pasar el mouse (Hover)
+    function highlightFeature(e) {
+        var layer = e.target;
+        layer.setStyle({
+            weight: 5,
+            color: '#666',
+            dashArray: '',
+            fillOpacity: 0.7
+        });
+        layer.bringToFront();
+    }
+
+    // 4. Cargar el archivo GeoJSON (Deberás tener el archivo de los estados de México)
+    // Ejemplo hipotético:
+    fetch('mexico_estados.json')
+        .then(response => response.json())
+        .then(data => {
+            L.geoJson(data, {
+                style: style,
+                onEachFeature: function(feature, layer) {
+                    layer.on({
+                        mouseover: highlightFeature,
+                        mouseout: function(e) { geojson.resetStyle(e.target); }
+                    });
+                }
+            }).addTo(map);
+        });
+</script>
+</body>
+</html>
 </html>
