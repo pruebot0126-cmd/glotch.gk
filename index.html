@@ -1,123 +1,123 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Glotch One - Comparador Estático</title>
-    
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glotch One - Comparador Estático</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
 
-    <style>
-        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        #map { height: 100vh; width: 100%; }
-        .info-panel {
-            position: absolute; top: 10px; left: 55px; z-index: 1000;
-            background: white; padding: 15px; border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2); max-width: 250px;
-        }
-        h1 { margin: 0; font-size: 20px; color: #1a73e8; }
-        .instruction { font-size: 12px; color: #444; margin-top: 8px; line-height: 1.4; }
-        .btn-clear { 
-            margin-top: 10px; width: 100%; padding: 5px; 
-            background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;
-        }
-    </style>
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        #map { height: 100vh; width: 100%; }
+        .info-panel {
+            position: absolute; top: 10px; left: 55px; z-index: 1000;
+            background: white; padding: 15px; border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); max-width: 250px;
+        }
+        h1 { margin: 0; font-size: 20px; color: #1a73e8; }
+        .instruction { font-size: 12px; color: #444; margin-top: 8px; line-height: 1.4; }
+        .btn-clear { 
+            margin-top: 10px; width: 100%; padding: 5px; 
+            background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;
+        }
+    </style>
 </head>
 <body>
 
-    <div class="info-panel">
-        <h1>Glotch One</h1>
-        <div class="instruction">
-            <b>1.</b> Dibuja un polígono o rectángulo.<br>
-            <b>2.</b> Al terminar, <b>la figura se quedará fija</b> en el centro.<br>
-            <b>3.</b> Desplaza el mapa para comparar el tamaño con otros lugares.
-        </div>
-        <button class="btn-clear" onclick="clearMap()">Borrar y empezar de nuevo</button>
-    </div>
+    <div class="info-panel">
+        <h1>Glotch One</h1>
+        <div class="instruction">
+            <b>1.</b> Dibuja un polígono o rectángulo.<br>
+            <b>2.</b> Al terminar, <b>la figura se quedará fija</b> en el centro.<br>
+            <b>3.</b> Desplaza el mapa para comparar el tamaño con otros lugares.
+        </div>
+        <button class="btn-clear" onclick="clearMap()">Borrar y empezar de nuevo</button>
+    </div>
 
-    <div id="map"></div>
+    <div id="map"></div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
-    <script>
-        const map = L.map('map').setView([20.6597, -103.3496], 13);
-        let fixedLayer = null; // Aquí guardaremos la figura fija
-        let offsets = []; // Distancias relativas de los puntos al centro
+    <script>
+        const map = L.map('map').setView([20.6597, -103.3496], 13);
+        let fixedLayer = null; // Aquí guardaremos la figura fija
+        let offsets = []; // Distancias relativas de los puntos al centro
 
-        // --- CAPAS ---
-        const estandar = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        const satelital = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
-        const temperatura = L.tileLayer('https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=684f88062973167b5796245d8b8577e5', {
-            opacity: 0.5
-        });
+        // --- CAPAS ---
+        const estandar = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        const satelital = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+        const temperatura = L.tileLayer('https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=684f88062973167b5796245d8b8577e5', {
+            opacity: 0.5
+        });
 
-        const baseMaps = { "Estándar": estandar, "Satelital": satelital };
-        const overlayMaps = { "Ver Temperatura": temperatura };
-        L.control.layers(baseMaps, overlayMaps).addTo(map);
+        const baseMaps = { "Estándar": estandar, "Satelital": satelital };
+        const overlayMaps = { "Ver Temperatura": temperatura };
+        L.control.layers(baseMaps, overlayMaps).addTo(map);
 
-        // --- HERRAMIENTAS DE DIBUJO ---
-        const drawnItems = new L.FeatureGroup();
-        map.addLayer(drawnItems);
+        // --- HERRAMIENTAS DE DIBUJO ---
+        const drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
 
-        const drawControl = new L.Control.Draw({
-            draw: {
-                polygon: { allowIntersection: false, shapeOptions: { color: '#1a73e8', fillOpacity: 0.3 } },
-                rectangle: { shapeOptions: { color: '#e67e22', fillOpacity: 0.3 } },
-                polyline: true, circle: false, marker: false, circlemarker: false
-            }
-        });
-        map.addControl(drawControl);
+        const drawControl = new L.Control.Draw({
+            draw: {
+                polygon: { allowIntersection: false, shapeOptions: { color: '#1a73e8', fillOpacity: 0.3 } },
+                rectangle: { shapeOptions: { color: '#e67e22', fillOpacity: 0.3 } },
+                polyline: true, circle: false, marker: false, circlemarker: false
+            }
+        });
+        map.addControl(drawControl);
 
-        // --- LÓGICA DE COMPARACIÓN (FIGURA FIJA) ---
-        map.on(L.Draw.Event.CREATED, function (e) {
-            const layer = e.layer;
-            const type = e.layerType;
+        // --- LÓGICA DE COMPARACIÓN (FIGURA FIJA) ---
+        map.on(L.Draw.Event.CREATED, function (e) {
+            const layer = e.layer;
+            const type = e.layerType;
 
-            if (type === 'polygon' || type === 'rectangle') {
-                fixedLayer = layer;
-                const center = map.getCenter();
-                const latlngs = layer.getLatLngs()[0];
+            if (type === 'polygon' || type === 'rectangle') {
+                fixedLayer = layer;
+                const center = map.getCenter();
+                const latlngs = layer.getLatLngs()[0];
 
-                // Guardar la distancia de cada punto respecto al centro del mapa
-                offsets = latlngs.map(p => ({
-                    latDiff: p.lat - center.lat,
-                    lngDiff: p.lng - center.lng
-                }));
+                // Guardar la distancia de cada punto respecto al centro del mapa
+                offsets = latlngs.map(p => ({
+                    latDiff: p.lat - center.lat,
+                    lngDiff: p.lng - center.lng
+                }));
 
-                layer.bindPopup("<b>Modo Comparación:</b> Navega por el mapa para comparar este tamaño.").openPopup();
-                drawnItems.addLayer(layer);
-            } else {
-                // Para líneas (medir distancia), no las fijamos
-                const points = layer.getLatLngs();
-                let d = 0;
-                for(let i=0; i<points.length-1; i++) d += points[i].distanceTo(points[i+1]);
-                layer.bindPopup(`Distancia: ${d.toFixed(2)} m`);
-                drawnItems.addLayer(layer);
-            }
-        });
+                layer.bindPopup("<b>Modo Comparación:</b> Navega por el mapa para comparar este tamaño.").openPopup();
+                drawnItems.addLayer(layer);
+            } else {
+                // Para líneas (medir distancia), no las fijamos
+                const points = layer.getLatLngs();
+                let d = 0;
+                for(let i=0; i<points.length-1; i++) d += points[i].distanceTo(points[i+1]);
+                layer.bindPopup(`Distancia: ${d.toFixed(2)} m`);
+                drawnItems.addLayer(layer);
+            }
+        });
 
-        // Evento que ocurre cada vez que mueves el mapa
-        map.on('move', function() {
-            if (fixedLayer && offsets.length > 0) {
-                const newCenter = map.getCenter();
-                
-                // Calculamos las nuevas coordenadas sumando el desfase al nuevo centro
-                const newLatLngs = offsets.map(offset => ({
-                    lat: newCenter.lat + offset.latDiff,
-                    lng: newCenter.lng + offset.lngDiff
-                }));
+        // Evento que ocurre cada vez que mueves el mapa
+        map.on('move', function() {
+            if (fixedLayer && offsets.length > 0) {
+                const newCenter = map.getCenter();
+                
+                // Calculamos las nuevas coordenadas sumando el desfase al nuevo centro
+                const newLatLngs = offsets.map(offset => ({
+                    lat: newCenter.lat + offset.latDiff,
+                    lng: newCenter.lng + offset.lngDiff
+                }));
 
-                fixedLayer.setLatLngs(newLatLngs);
-            }
-        });
+                fixedLayer.setLatLngs(newLatLngs);
+            }
+        });
 
-        function clearMap() {
-            drawnItems.clearLayers();
-            fixedLayer = null;
-            offsets = [];
-        }
-    </script>
+        function clearMap() {
+            drawnItems.clearLayers();
+            fixedLayer = null;
+            offsets = [];
+        }
+    </script>
 </body>
 </html>
