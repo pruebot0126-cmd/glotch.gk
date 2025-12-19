@@ -3,134 +3,154 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Glotch One - Comparador Táctil</title>
+    <title>Glotch One - Buscador y Comparador</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
 
     <style>
         :root {
             --primary-color: #1a73e8;
             --danger-color: #e74c3c;
-            --panel-bg: rgba(255, 255, 255, 0.95);
         }
 
         body { 
             margin: 0; padding: 0; 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            overscroll-behavior-y: contain; /* Evita el refresh al deslizar hacia abajo */
+            font-family: -apple-system, system-ui, sans-serif;
+            overscroll-behavior-y: contain;
         }
 
-        /* Altura dinámica para móviles (evita problemas con la barra de direcciones) */
         #map { height: 100dvh; width: 100%; z-index: 1; }
 
-        /* Panel superior flotante y colapsable */
-        .info-panel {
-            position: absolute;
-            top: 12px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
-            background: var(--panel-bg);
-            padding: 12px 16px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-            width: 85%;
-            max-width: 350px;
-            backdrop-filter: blur(5px);
-            transition: all 0.3s ease;
-        }
-
-        h1 { margin: 0 0 8px 0; font-size: 18px; color: var(--primary-color); text-align: center; }
-        
-        .instruction { 
-            font-size: 13px; 
-            color: #333; 
-            line-height: 1.4;
-            display: block; 
-        }
-
-        .btn-clear { 
-            margin-top: 12px;
-            width: 100%;
-            padding: 10px; 
-            background: var(--danger-color);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 14px;
+        /* Estilo para el botón de borrar flotante */
+        .custom-control-btn {
+            background: white;
+            border: 2px solid rgba(0,0,0,0.2);
+            border-radius: 4px;
+            padding: 8px 12px;
             cursor: pointer;
-            touch-action: manipulation;
+            font-weight: bold;
+            color: var(--danger-color);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            font-size: 14px;
         }
 
-        /* Ajustes para los controles de Leaflet en móvil */
-        .leaflet-touch .leaflet-draw-toolbar {
-            margin-top: 100px !important; /* Baja las herramientas para no chocar con el panel */
-        }
+        .custom-control-btn:active { background: #f4f4f4; }
 
-        /* Estilo para el modo minimalista al mover el mapa */
-        .map-moving .info-panel {
-            opacity: 0.3;
-            pointer-events: none;
+        /* Ajustes del buscador para móviles */
+        .leaflet-control-geocoder {
+            margin-top: 12px !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+        }
+        
+        .leaflet-control-geocoder-form input {
+            font-size: 16px !important; /* Evita zoom automático en iOS */
         }
     </style>
 </head>
 <body>
 
-    <div class="info-panel" id="ui-panel">
-        <h1>Glotch One</h1>
-        <div class="instruction">
-            1. Dibuja un polígono.<br>
-            2. La figura se fijará al centro.<br>
-            3. Desplaza el mapa para comparar.
-        </div>
-        <button class="btn-clear" onclick="clearMap()">Borrar figura</button>
-    </div>
-
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
     <script>
-        // Configuración inicial optimizada para móviles
         const map = L.map('map', {
-            zoomControl: false, // Lo moveremos de lugar
-            tap: true           // Mejora clics en algunos navegadores móviles
+            zoomControl: false,
+            tap: true
         }).setView([20.6597, -103.3496], 13);
-
-        // Mover control de zoom a la derecha abajo (más accesible al pulgar)
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
 
         let fixedLayer = null;
         let offsets = [];
 
-        // --- CAPAS ---
+        // Capas base
         const estandar = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         const satelital = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
-        
-        const baseMaps = { "Mapa": estandar, "Satelital": satelital };
-        L.control.layers(baseMaps, {}, { position: 'bottomleft' }).addTo(map);
 
-        // --- HERRAMIENTAS DE DIBUJO ---
+        // --- AGREGAR BUSCADOR ---
+        const geocoder = L.Control.geocoder({
+            defaultMarkGeocode: true,
+            placeholder: "Buscar ciudad o lugar...",
+            errorMessage: "No se encontró el lugar."
+        }).addTo(map);
+
+        // --- CONTROLES UI ---
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+        
+        // Botón "Borrar" personalizado
+        const ClearControl = L.Control.extend({
+            options: { position: 'topright' },
+            onAdd: function() {
+                const btn = L.DomUtil.create('button', 'custom-control-btn');
+                btn.innerHTML = 'Limpiar Figura';
+                btn.onclick = clearMap;
+                return btn;
+            }
+        });
+        map.addControl(new ClearControl());
+
+        // Capas
+        L.control.layers({ "Mapa": estandar, "Satelital": satelital }, {}, { position: 'bottomleft' }).addTo(map);
+
+        // --- DIBUJO ---
         const drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
 
         const drawControl = new L.Control.Draw({
+            position: 'topleft',
             draw: {
-                polygon: { allowIntersection: false, shapeOptions: { color: '#1a73e8', weight: 3 } },
-                rectangle: { shapeOptions: { color: '#e67e22', weight: 3 } },
+                polygon: { allowIntersection: false, shapeOptions: { color: '#1a73e8', weight: 4 } },
+                rectangle: { shapeOptions: { color: '#e67e22', weight: 4 } },
                 polyline: false, circle: false, marker: false, circlemarker: false
             }
         });
         map.addControl(drawControl);
 
-        // --- LÓGICA DE COMPARACIÓN ---
+        // --- LÓGICA DE COMPARACIÓN (FIGURA FIJA) ---
         map.on(L.Draw.Event.CREATED, function (e) {
-            clearMap(); // Solo permitimos una figura para no sobrecargar
-            
+            clearMap();
             const layer = e.layer;
             fixedLayer = layer;
             const center = map.getCenter();
-            const latlngs = layer.
+            
+            // Soporte para polígonos y rectángulos (manejo de arreglos anidados)
+            const rawLatLngs = layer.getLatLngs();
+            const latlngs = Array.isArray(rawLatLngs[0]) ? rawLatLngs[0] : rawLatLngs;
+
+            offsets = latlngs.map(p => ({
+                latDiff: p.lat - center.lat,
+                lngDiff: p.lng - center.lng
+            }));
+
+            drawnItems.addLayer(layer);
+        });
+
+        // Movimiento suave optimizado
+        let ticking = false;
+        map.on('move', function() {
+            if (!ticking && fixedLayer && offsets.length > 0) {
+                window.requestAnimationFrame(() => {
+                    const newCenter = map.getCenter();
+                    const newLatLngs = offsets.map(offset => ({
+                        lat: newCenter.lat + offset.latDiff,
+                        lng: newCenter.lng + offset.lngDiff
+                    }));
+                    fixedLayer.setLatLngs(newLatLngs);
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        });
+
+        function clearMap() {
+            drawnItems.clearLayers();
+            fixedLayer = null;
+            offsets = [];
+        }
+    </script>
+</body>
+</html>
